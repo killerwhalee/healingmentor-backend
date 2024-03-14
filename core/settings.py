@@ -19,7 +19,11 @@ Github: https://github.com/killerwhalee/healingmentor
 """
 
 from pathlib import Path
-import os
+import dotenv, os
+
+# Load Environment Variables
+
+dotenv.load_dotenv()
 
 
 # Base Directory
