@@ -207,9 +207,9 @@ USE_L10N = True
 USE_TZ = False
 
 
-# Static files (For Admin Only)
+# Static files
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 
 STATIC_ROOT = BASE_DIR / "_static"
 
