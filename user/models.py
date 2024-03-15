@@ -27,6 +27,8 @@ class UserManager(BaseUserManager):
         
         user = self.model(username=username)
         user.set_password(password)
+        
+        print(user.username, user.password)
 
         user.save(using=self._db)
 
@@ -71,6 +73,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = "username"
     EMAIL_FIELD = "username"
+    
+    def __str__(self):
+        return f"User: {self.username}"
 
 
 # User Profile Model
@@ -90,6 +95,9 @@ class Profile(models.Model):
         upload_to=uuid_filepath,
         default="/static/image/profile-default.png",
     )
+    
+    def __str__(self):
+        return f"Profile: {self.user.username}"
 
 
 @receiver(post_save, sender=User)

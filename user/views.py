@@ -6,25 +6,33 @@ from rest_framework.permissions import AllowAny
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from user.serializer import UserSerializer, ProfileSerializer
+from user.serializer import (
+    UserAuthSerializer,
+    UserSerializer,
+    ProfileSerializer,
+)
 
-class AuthViewSet(viewsets.ViewSet):
+
+class UserAuthViewSet(viewsets.ViewSet):
     authentication_classes = []
     permission_classes = [AllowAny]
 
     def login(self, request):
-        user = authenticate(
-            username=request.data.get("username"),
-            password=request.data.get("password"),
-        )
+        serializer = UserAuthSerializer(data=request.data)
+
+        if serializer.is_valid():
+            username = serializer.data["username"]
+            password = serializer.data["password"]
+
+        user = authenticate(request, username=username, password=password)
 
         if user is not None:
-            serializer = UserSerializer(user)
+            serializer = UserAuthSerializer(user)
             refresh = RefreshToken.for_user(user)
 
             response = Response(
                 {
-                    "user": serializer.data,
+                    "user": serializer.data["username"],
                     "token": {
                         "access": str(refresh.access_token),
                         "refresh": str(refresh),
@@ -44,17 +52,17 @@ class AuthViewSet(viewsets.ViewSet):
         )
 
     def signup(self, request):
-        serializer = UserSerializer(data=request.data)
+        serializer = UserAuthSerializer(data=request.data)
 
         if serializer.is_valid():
             user = serializer.save()
 
-            serializer = UserSerializer(user)
+            serializer = UserAuthSerializer(user)
             refresh = RefreshToken.for_user(user)
 
             response = Response(
                 {
-                    "user": serializer.data,
+                    "user": serializer.data["username"],
                     "token": {
                         "access": str(refresh.access_token),
                         "refresh": str(refresh),

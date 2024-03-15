@@ -3,6 +3,19 @@ from rest_framework import serializers
 from user.models import User, Profile
 
 
+class UserAuthSerializer(serializers.Serializer):
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True)
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data["username"],
+            password=validated_data["password"],
+        )
+
+        return user
+
+
 class UserSerializer(serializers.ModelSerializer):
     object = serializers.SerializerMethodField()
 
@@ -10,14 +23,6 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["object", "id", "username"]
         read_only_fields = ["object", "id"]
-
-    def create(self, validated_data):
-        user = User.objects.create_user(
-            username=validated_data["username"],
-            password=validated_data["password"],
-        )
-        
-        return user
 
     def get_object(self, _):
         return "user"
