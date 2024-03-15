@@ -34,8 +34,8 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ["object", "id", "user", "date_joined", "profile_image"]
-        read_only_fields = ["object", "id", "date_joined"]
+        fields = ["object", "user", "date_joined", "profile_image"]
+        read_only_fields = ["object", "date_joined"]
 
     def get_object(self, _):
         return "profile"

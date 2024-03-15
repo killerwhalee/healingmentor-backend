@@ -24,10 +24,10 @@ class UserManager(BaseUserManager):
 
     def create_user(self, username, password):
         """Create user object"""
-        
+
         user = self.model(username=username)
         user.set_password(password)
-        
+
         print(user.username, user.password)
 
         user.save(using=self._db)
@@ -36,7 +36,7 @@ class UserManager(BaseUserManager):
 
     def create_superuser(self, username, password):
         """Create superuser object"""
-        
+
         user = self.create_user(username, password)
 
         # Set admin permissions
@@ -52,7 +52,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     """
     Custom User Model
-    
+
     It serves minimal user information, limited to username and password.
 
     """
@@ -73,7 +73,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = "username"
     EMAIL_FIELD = "username"
-    
+
     def __str__(self):
         return f"User: {self.username}"
 
@@ -88,14 +88,14 @@ class Profile(models.Model):
 
     """
 
-    user = models.OneToOneField("user.User", on_delete=models.CASCADE)
+    user = models.OneToOneField("user.User", primary_key=True, on_delete=models.CASCADE)
     date_joined = models.DateTimeField(auto_now_add=True)
     profile_image = models.ImageField(
         "Profile image",
         upload_to=uuid_filepath,
         default="/static/image/profile-default.png",
     )
-    
+
     def __str__(self):
         return f"Profile: {self.user.username}"
 
