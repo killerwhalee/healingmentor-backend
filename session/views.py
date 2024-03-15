@@ -8,8 +8,8 @@ from django.core.paginator import Paginator
 
 from core.utils import uuid_filepath
 
-from .forms import RespiratoryGraphForm, SustainedAttentionForm
-from .models import MultiplyerData, RespiratoryGraphData, SustainedAttentionData
+from session.forms import RespiratoryGraphForm, SustainedAttentionForm
+from session.models import Multiplyer, RespiratoryGraph, SustainedAttention
 
 
 def calculate_score(user, time_input):
@@ -17,9 +17,9 @@ def calculate_score(user, time_input):
     from django.core.exceptions import ObjectDoesNotExist
 
     try:
-        mul_obj = MultiplyerData.objects.get(user=user)
+        mul_obj = Multiplyer.objects.get(user=user)
     except ObjectDoesNotExist:
-        mul_obj = MultiplyerData.objects.create(user=user)
+        mul_obj = Multiplyer.objects.create(user=user)
 
     # Update Multiplyer date and amount
     from datetime import datetime, time, timedelta
@@ -84,7 +84,7 @@ def rg_record(request):
 
         if form.is_valid():
             # Create new data object
-            rg_obj = RespiratoryGraphData()
+            rg_obj = RespiratoryGraph()
 
             # Write user and time
             rg_obj.user = request.user
@@ -126,10 +126,10 @@ def rg_inquiry(request):
 
     # Load all data if user is staff
     if request.user.is_staff:
-        raw_data_list = RespiratoryGraphData.objects.all().order_by("-date_created")
+        raw_data_list = RespiratoryGraph.objects.all().order_by("-date_created")
     # If not, load user data only
     else:
-        raw_data_list = RespiratoryGraphData.objects.filter(user=request.user).order_by(
+        raw_data_list = RespiratoryGraph.objects.filter(user=request.user).order_by(
             "-date_created"
         )
 
@@ -166,7 +166,7 @@ def rg_inquiry(request):
 
 @login_required(login_url="common:login")
 def rg_delete(request, id):
-    target_data = RespiratoryGraphData.objects.get(id=id)
+    target_data = RespiratoryGraph.objects.get(id=id)
 
     # Process delete only if user matches
     if target_data.user == request.user:
@@ -184,7 +184,7 @@ def sa_record(request):
 
         if form.is_valid():
             # Create new data object
-            sa_obj = SustainedAttentionData()
+            sa_obj = SustainedAttention()
 
             # Write user and time
             sa_obj.user = request.user
@@ -230,10 +230,10 @@ def sa_inquiry(request):
 
     # Load all data if user is staff
     if request.user.is_staff:
-        raw_data_list = RespiratoryGraphData.objects.all().order_by("-date_created")
+        raw_data_list = RespiratoryGraph.objects.all().order_by("-date_created")
     # If not, load user data only
     else:
-        raw_data_list = RespiratoryGraphData.objects.filter(user=request.user).order_by(
+        raw_data_list = RespiratoryGraph.objects.filter(user=request.user).order_by(
             "-date_created"
         )
 
@@ -270,7 +270,7 @@ def sa_inquiry(request):
 
 @login_required(login_url="common:login")
 def sa_delete(request, id):
-    target_data = SustainedAttentionData.objects.get(id=id)
+    target_data = SustainedAttention.objects.get(id=id)
 
     # Process delete only if user matches
     if target_data.user == request.user:
@@ -288,7 +288,7 @@ def gm_record(request):
 
         if form.is_valid():
             # Create new data object
-            sa_obj = SustainedAttentionData()
+            sa_obj = SustainedAttention()
 
             # Write user and time
             sa_obj.user = request.user

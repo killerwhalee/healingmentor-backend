@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import MultiplyerData, RespiratoryGraphData, SustainedAttentionData
+from .models import Multiplyer, RespiratoryGraph, SustainedAttention
 
-admin.site.register(MultiplyerData)
-admin.site.register(RespiratoryGraphData)
-admin.site.register(SustainedAttentionData)
+admin.site.register(Multiplyer)
+admin.site.register(RespiratoryGraph)
+admin.site.register(SustainedAttention)

@@ -4,7 +4,7 @@ from core.settings import MEDIA_ROOT
 from core.utils import uuid_filepath
 
 
-class MultiplyerData(models.Model):
+class Multiplyer(models.Model):
     """
     Multiplyer Data
 
@@ -29,7 +29,7 @@ class MultiplyerData(models.Model):
     )
 
 
-class RespiratoryGraphData(models.Model):
+class RespiratoryGraph(models.Model):
     """
     Respiratory Graph Data
 
@@ -43,7 +43,7 @@ class RespiratoryGraphData(models.Model):
 
         if self.csv_data:
             os.remove(os.path.join(MEDIA_ROOT, self.csv_data.path))
-        super(RespiratoryGraphData, self).delete(*args, **kargs)
+        super(RespiratoryGraph, self).delete(*args, **kargs)
 
     user = models.ForeignKey("user.User", verbose_name="username", on_delete=models.PROTECT)
     date_created = models.DateTimeField(
@@ -56,7 +56,7 @@ class RespiratoryGraphData(models.Model):
     note = models.TextField("user note")
 
 
-class SustainedAttentionData(models.Model):
+class SustainedAttention(models.Model):
     """
     Sustained Attention Data
 
@@ -70,7 +70,7 @@ class SustainedAttentionData(models.Model):
 
         if self.csv_data:
             os.remove(os.path.join(MEDIA_ROOT, self.csv_data.path))
-        super(SustainedAttentionData, self).delete(*args, **kargs)
+        super(SustainedAttention, self).delete(*args, **kargs)
 
     user = models.ForeignKey("user.User", verbose_name="username", on_delete=models.PROTECT)
     date_created = models.DateTimeField(
