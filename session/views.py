@@ -1,325 +1,115 @@
-from django.shortcuts import render, redirect
-from django.http import HttpResponse
-from django.utils import timezone
-from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
-from django.core.files.base import ContentFile
-from django.core.paginator import Paginator
+from django.core.exceptions import ObjectDoesNotExist
+
+from rest_framework import viewsets
+from rest_framework.response import Response
 
-from core.utils import uuid_filepath
+from session.utils import calculate_score
+from session.models import (
+    GuidedMeditation,
+    RespiratoryGraph,
+    SustainedAttention,
+)
+from session.serializer import (
+    GuidedMeditationSerializer,
+    RespiratoryGraphSerializer,
+    SustainedAttentionSerializer,
+)
 
-from session.forms import RespiratoryGraphForm, SustainedAttentionForm
-from session.models import Multiplyer, RespiratoryGraph, SustainedAttention
 
+class SessionViewSet(viewsets.ViewSet):
+    """
+    ### Base Session Viewset
 
-def calculate_score(user, time_input):
-    # Import MultiplyerData
-    from django.core.exceptions import ObjectDoesNotExist
+    This is base session viewset.
 
-    try:
-        mul_obj = Multiplyer.objects.get(user=user)
-    except ObjectDoesNotExist:
-        mul_obj = Multiplyer.objects.create(user=user)
+    You can use custom-defined session model and serializer by setting 
+    `Session` and `SessionSerializer` to your session model and serializer.
 
-    # Update Multiplyer date and amount
-    from datetime import datetime, time, timedelta
+    """
 
-    time_now = datetime.now()
-    time_yesterday = time_now - timedelta(days=1)
+    Session = None
+    SessionSerializer = None
 
-    time_pivot_yd = datetime.combine(time_yesterday.date(), time(17, 0))
-    time_pivot_am = datetime.combine(time_now.date(), time(5, 0))
-    time_pivot_pm = datetime.combine(time_now.date(), time(17, 0))
+    def list(self, request):
+        session_list = self.Session.objects.filter(user=request.user)
+        serializer = self.SessionSerializer(session_list, many=True)
 
-    # Update daily multiplyer
-    if time_now > time_pivot_pm and time_now != time_pivot_pm:
-        mul_obj.daily_datetime = time_pivot_pm
-        mul_obj.daily_tokens = 900
-    elif time_now > time_pivot_am and time_now != time_pivot_am:
-        mul_obj.daily_datetime = time_pivot_am
-        mul_obj.daily_tokens = 900
-    elif time_now != time_pivot_yd:
-        mul_obj.daily_datetime = time_pivot_yd
-        mul_obj.daily_tokens = 900
-
-    # Update hourly multiplyer
-    if time_now - mul_obj.hourly_datetime > timedelta(hours=1):
-        mul_obj.hourly_datetime = time_now
-        mul_obj.hourly_tokens = 300
+        return Response(serializer.data)
 
-    # Calculate multiplied score
-    score = 0
-    tokens_required = int(float(time_input))
-
-    # Use hourly tokens
-    tokens_used = min(tokens_required, mul_obj.hourly_tokens)
-    score += tokens_used * (1 / 6) * 3
-    tokens_required -= tokens_used
-    mul_obj.hourly_tokens -= tokens_used
+    def create(self, request):
+        serializer = self.SessionSerializer(data=request.data)
 
-    # Use daily tokens
-    tokens_used = min(tokens_required, mul_obj.daily_tokens)
-    score += tokens_used * (1 / 6) * 3
-    tokens_required -= tokens_used
-    mul_obj.daily_tokens -= tokens_used
-
-    # Add remainder
-    score += tokens_required * (1 / 6)
+        if serializer.is_valid():
+            serializer.validated_data["user"] = request.user
+            serializer.save()
 
-    # Save multiplyer object
-    mul_obj.save()
+            return Response(serializer.data, status=201)
 
-    # Return result score
-    return score
-
-
-def index(request):
-    return render(request, "session/index.html")
-
+        return Response(serializer.errors, status=400)
 
-@login_required(login_url="common:login")
-def rg_record(request):
-    if request.method == "POST":
-        form = RespiratoryGraphForm(request.POST)
+    def retrieve(self, request, session_id):
+        try:
+            session = self.Session.objects.get(id=session_id)
 
-        if form.is_valid():
-            # Create new data object
-            rg_obj = RespiratoryGraph()
+            if request.user == session.user:
+                serializer = self.SessionSerializer(session)
 
-            # Write user and time
-            rg_obj.user = request.user
-            rg_obj.date_created = timezone.now()
+                return Response(serializer.data)
 
-            # Retrieve data from form
-            csv_input = form.cleaned_data["csv_input"]
-            time_input = form.cleaned_data["time_input"]
-            note_input = form.cleaned_data["note_input"]
+            return Response(
+                {
+                    "error": "access_denied",
+                    "message": "You do not have permission to access this object",
+                },
+                status=403,
+            )
 
-            # Write CSV data
-            from urllib.parse import unquote
+        except ObjectDoesNotExist:
+            return Response(
+                {
+                    "error": "not_found",
+                    "message": "Object does not exist",
+                },
+                status=404,
+            )
 
-            file_path = uuid_filepath(rg_obj, "result.csv")
-            rg_obj.csv_data.save(file_path, ContentFile(unquote(csv_input)))
+    def destroy(self, request, session_id):
+        try:
+            session = self.Session.objects.get(id=session_id)
 
-            # Write score data
-            rg_obj.score = calculate_score(request.user, time_input)
+            if request.user == session.user:
+                session.delete()
 
-            # Write note data
-            rg_obj.note = note_input
+                return Response(status=204)
 
-            # Save into model
-            rg_obj.save()
+            return Response(
+                {
+                    "error": "access_denied",
+                    "message": "You do not have permission to access this object",
+                },
+                status=403,
+            )
 
-            return redirect("session:rg-record")
+        except ObjectDoesNotExist:
+            return Response(
+                {
+                    "error": "not_found",
+                    "message": "Object does not exist",
+                },
+                status=404,
+            )
 
-    form = RespiratoryGraphForm()
-    context = {"form": form}
-    return render(request, "session/rg-record.html", context)
 
+class GuidedMeditationViewSet(SessionViewSet):
+    Session = GuidedMeditation
+    SessionSerializer = GuidedMeditationSerializer
 
-@login_required(login_url="common:login")
-def rg_inquiry(request):
-    # Initial variable settings
-    data_list = []
-    csv_x_data_list = []
-    csv_y_data_list = []
 
-    # Load all data if user is staff
-    if request.user.is_staff:
-        raw_data_list = RespiratoryGraph.objects.all().order_by("-date_created")
-    # If not, load user data only
-    else:
-        raw_data_list = RespiratoryGraph.objects.filter(user=request.user).order_by(
-            "-date_created"
-        )
+class RespiratoryGraphViewSet(SessionViewSet):
+    Session = RespiratoryGraph
+    SessionSerializer = RespiratoryGraphSerializer
 
-    # Paginate raw datas
-    page = request.GET.get("page", 1)
-    paginator = Paginator(raw_data_list, 10)
-    raw_data_list = paginator.get_page(page)
 
-    for data in raw_data_list:
-        from core.settings import MEDIA_ROOT
-        import csv
-
-        csv_x_data = []
-        csv_y_data = []
-
-        with open(f"{MEDIA_ROOT}/{data.csv_data}", "r") as file:
-            csv_data = csv.reader(file)
-            for row in csv_data:
-                csv_x_data.append(float(row[0]))
-                csv_y_data.append(float(row[1]))
-
-        csv_x_data_list.append(csv_x_data)
-        csv_y_data_list.append(csv_y_data)
-
-        data_list = zip(raw_data_list, csv_x_data_list, csv_y_data_list)
-
-    # Send context to inquiry html template
-    context = {
-        "data_list": data_list,
-        "page_obj": raw_data_list,
-    }
-    return render(request, "session/rg-inquiry.html", context)
-
-
-@login_required(login_url="common:login")
-def rg_delete(request, id):
-    target_data = RespiratoryGraph.objects.get(id=id)
-
-    # Process delete only if user matches
-    if target_data.user == request.user:
-        target_data.delete()
-        return redirect("session:rg-inquiry", request.user)
-
-    # Respond to (403)Forbidden if user does not match
-    return HttpResponse(status=403)
-
-
-@login_required(login_url="common:login")
-def sa_record(request):
-    if request.method == "POST":
-        form = SustainedAttentionForm(request.POST)
-
-        if form.is_valid():
-            # Create new data object
-            sa_obj = SustainedAttention()
-
-            # Write user and time
-            sa_obj.user = request.user
-            sa_obj.date_created = timezone.now()
-
-            # Retrieve data from form
-            csv_input = form.cleaned_data["csv_input"]
-            rate_input = form.cleaned_data["rate_input"]
-            time_input = form.cleaned_data["time_input"]
-            note_input = form.cleaned_data["note_input"]
-
-            # Write CSV data
-            from urllib.parse import unquote
-
-            file_path = uuid_filepath(sa_obj, "result.csv")
-            sa_obj.csv_data.save(file_path, ContentFile(unquote(csv_input)))
-
-            # Write rate data
-            sa_obj.rate_data = rate_input
-
-            # Write score data
-            sa_obj.score = calculate_score(request.user, time_input)
-
-            # Write note data
-            sa_obj.note = note_input
-
-            # Save into model
-            sa_obj.save()
-
-            return redirect("session:sa-record")
-
-    form = SustainedAttentionForm()
-    context = {"form": form}
-    return render(request, "session/sa-record.html", context)
-
-
-@login_required(login_url="common:login")
-def sa_inquiry(request):
-    # Initial variable settings
-    data_list = []
-    csv_x_data_list = []
-    csv_y_data_list = []
-
-    # Load all data if user is staff
-    if request.user.is_staff:
-        raw_data_list = RespiratoryGraph.objects.all().order_by("-date_created")
-    # If not, load user data only
-    else:
-        raw_data_list = RespiratoryGraph.objects.filter(user=request.user).order_by(
-            "-date_created"
-        )
-
-    # Paginate raw datas
-    page = request.GET.get("page", 1)
-    paginator = Paginator(raw_data_list, 10)
-    raw_data_list = paginator.get_page(page)
-
-    for data in raw_data_list:
-        from core.settings import MEDIA_ROOT
-        import csv
-
-        csv_x_data = []
-        csv_y_data = []
-
-        with open(f"{MEDIA_ROOT}/{data.csv_data}", "r") as file:
-            csv_data = csv.reader(file)
-            for row in csv_data:
-                csv_x_data.append(float(row[0]))
-                csv_y_data.append(float(row[1]))
-
-        csv_x_data_list.append(csv_x_data)
-        csv_y_data_list.append(csv_y_data)
-
-        data_list = zip(raw_data_list, csv_x_data_list, csv_y_data_list)
-
-    # Send context to inquiry html template
-    context = {
-        "data_list": data_list,
-        "page_obj": raw_data_list,
-    }
-    return render(request, "session/sa-inquiry.html", context)
-
-
-@login_required(login_url="common:login")
-def sa_delete(request, id):
-    target_data = SustainedAttention.objects.get(id=id)
-
-    # Process delete only if user matches
-    if target_data.user == request.user:
-        target_data.delete()
-        return redirect("session:sa-inquiry", request.user)
-
-    # Respond to (403)Forbidden if user does not match
-    return HttpResponse(status=403)
-
-
-@login_required(login_url="common:login")
-def gm_record(request):
-    if request.method == "POST":
-        form = SustainedAttentionForm(request.POST)
-
-        if form.is_valid():
-            # Create new data object
-            sa_obj = SustainedAttention()
-
-            # Write user and time
-            sa_obj.user = request.user
-            sa_obj.date_created = timezone.now()
-
-            # Retrieve data from form
-            csv_input = form.cleaned_data["csv_input"]
-            rate_input = form.cleaned_data["rate_input"]
-            time_input = form.cleaned_data["time_input"]
-            note_input = form.cleaned_data["note_input"]
-
-            # Write CSV data
-            from urllib.parse import unquote
-
-            file_path = uuid_filepath(sa_obj, "result.csv")
-            sa_obj.csv_data.save(file_path, ContentFile(unquote(csv_input)))
-
-            # Write rate data
-            sa_obj.rate_data = rate_input
-
-            # Write score data
-            sa_obj.score = calculate_score(request.user, time_input)
-
-            # Write note data
-            sa_obj.note = note_input
-
-            # Save into model
-            sa_obj.save()
-
-            return redirect("session:gm-record")
-
-    form = SustainedAttentionForm()
-    context = {"form": form}
-    return render(request, "session/gm-record.html", context)
+class SustainedAttentionViewSet(SessionViewSet):
+    Session = SustainedAttention
+    SessionSerializer = SustainedAttentionSerializer

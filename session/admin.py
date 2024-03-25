@@ -1,6 +1,11 @@
 from django.contrib import admin
-from .models import Multiplyer, RespiratoryGraph, SustainedAttention
 
-admin.site.register(Multiplyer)
+from session.models import (
+    GuidedMeditation,
+    RespiratoryGraph,
+    SustainedAttention,
+)
+
+admin.site.register(GuidedMeditation)
 admin.site.register(RespiratoryGraph)
 admin.site.register(SustainedAttention)

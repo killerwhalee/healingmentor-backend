@@ -1,7 +1,10 @@
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
-from core.settings import MEDIA_ROOT
-from core.utils import uuid_filepath
+from user.models import User
+
+import uuid
 
 
 class Multiplyer(models.Model):
@@ -12,15 +15,16 @@ class Multiplyer(models.Model):
 
     """
 
-    user = models.ForeignKey("user.User", verbose_name="username", on_delete=models.CASCADE)
+    # Multiplyer extends user
+    user = models.OneToOneField("user.User", primary_key=True, on_delete=models.CASCADE)
 
-    # Daily Multiplyer
+    # Daily multiplyer
     daily_datetime = models.DateTimeField(
         "Last daily multiplyer creation", auto_now=False, auto_now_add=True
     )
     daily_tokens = models.IntegerField("Daily multiplyer left in seconds", default=900)
 
-    # Hourly Multiplyer
+    # Hourly multiplyer
     hourly_datetime = models.DateTimeField(
         "Last hourly multiplyer creation", auto_now=False, auto_now_add=True
     )
@@ -29,56 +33,50 @@ class Multiplyer(models.Model):
     )
 
 
-class RespiratoryGraph(models.Model):
+@receiver(post_save, sender=User)
+def create_user_multiplyer(sender, instance, created, **kwargs):
+    if created:
+        Multiplyer.objects.create(user=instance)
+
+
+class Session(models.Model):
     """
-    Respiratory Graph Data
+    ### Base Session Model
 
-    Data table for Respiratory Graph
+    This model is for base of every session model. Also, fields in this model are read-only.
 
-    """
-
-    # Override delete() to delete connected csv file
-    def delete(self, *args, **kargs):
-        import os
-
-        if self.csv_data:
-            os.remove(os.path.join(MEDIA_ROOT, self.csv_data.path))
-        super(RespiratoryGraph, self).delete(*args, **kargs)
-
-    user = models.ForeignKey("user.User", verbose_name="username", on_delete=models.PROTECT)
-    date_created = models.DateTimeField(
-        "date created", auto_now=False, auto_now_add=True
-    )
-    csv_data = models.FileField(
-        "csv data file", upload_to=uuid_filepath, max_length=None, null=False
-    )
-    score = models.IntegerField("recorded points", default=0)
-    note = models.TextField("user note")
-
-
-class SustainedAttention(models.Model):
-    """
-    Sustained Attention Data
-
-    Data table for Respiratory Data
+    When you create new specified session model, inherit this model.
 
     """
 
-    # Override delete() to delete connected csv file
-    def delete(self, *args, **kargs):
-        import os
-
-        if self.csv_data:
-            os.remove(os.path.join(MEDIA_ROOT, self.csv_data.path))
-        super(SustainedAttention, self).delete(*args, **kargs)
-
-    user = models.ForeignKey("user.User", verbose_name="username", on_delete=models.PROTECT)
-    date_created = models.DateTimeField(
-        "date created", auto_now=False, auto_now_add=True
+    # Identifier
+    id = models.UUIDField(
+        "Session id",
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
     )
-    csv_data = models.FileField(
-        "csv data file", upload_to=uuid_filepath, max_length=None
-    )
-    rate_data = models.JSONField("rading data", null=True)
-    score = models.IntegerField("recorded points", default=0)
-    note = models.TextField("user notes")
+
+    # Basic information
+    user = models.ForeignKey("user.User", on_delete=models.CASCADE)
+    date_created = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    # Common fields
+    score = models.IntegerField("session points", default=0)
+
+
+class GuidedMeditation(Session):
+    lecture = models.CharField(max_length=64)
+    reports = models.JSONField()
+
+
+class RespiratoryGraph(Session):
+    graph_data = models.JSONField("graph data")
+    reports = models.JSONField()
+
+
+class SustainedAttention(Session):
+    graph_data = models.JSONField("graph data")
+    rate_data = models.JSONField("rating data", default=list)
+    reports = models.JSONField()
