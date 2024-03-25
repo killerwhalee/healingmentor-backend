@@ -45,8 +45,8 @@ class UserAuthViewSet(viewsets.ViewSet):
 
         return Response(
             {
-                "error": "login failed",
-                "message": "Failed to login",
+                "error": "login_failed",
+                "message": "Wrong username or password",
             },
             status=401,
         )
@@ -75,14 +75,14 @@ class UserAuthViewSet(viewsets.ViewSet):
 
         return Response(
             {
-                "error": "signup failed",
-                "message": "Failed to sign up user",
+                "error": "signup_failed",
+                "message": "Failed to sign up",
             },
             status=401,
         )
 
 
-class UserViewSet(viewsets.ViewSet):
+class ProfileViewSet(viewsets.ViewSet):
     def retrieve(self, request):
         serializer = ProfileSerializer(request.user.profile)
 

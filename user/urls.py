@@ -1,8 +1,8 @@
-from django.urls import path, include
+from django.urls import path
 
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from user.views import UserAuthViewSet, UserViewSet
+from user.views import UserAuthViewSet, ProfileViewSet
 
 urlpatterns = [
     path(
@@ -15,7 +15,7 @@ urlpatterns = [
     ),
     path(
         "profile",
-        UserViewSet.as_view({"get": "retrieve", "patch": "update"}),
+        ProfileViewSet.as_view({"get": "retrieve", "patch": "update"}),
     ),
     path(
         "token/refresh",
