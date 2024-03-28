@@ -1,7 +1,12 @@
 from django.core.exceptions import ObjectDoesNotExist
 
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.response import Response
+from rest_framework.exceptions import (
+    NotFound,
+    PermissionDenied,
+    ValidationError,
+)
 
 from session.utils import calculate_score
 from session.models import (
@@ -22,7 +27,7 @@ class SessionViewSet(viewsets.ViewSet):
 
     This is base session viewset.
 
-    You can use custom-defined session model and serializer by setting 
+    You can use custom-defined session model and serializer by setting
     `Session` and `SessionSerializer` to your session model and serializer.
 
     """
@@ -34,7 +39,10 @@ class SessionViewSet(viewsets.ViewSet):
         session_list = self.Session.objects.filter(user=request.user)
         serializer = self.SessionSerializer(session_list, many=True)
 
-        return Response(serializer.data)
+        return Response(
+            data=serializer.data,
+            status=status.HTTP_200_OK,
+        )
 
     def create(self, request):
         serializer = self.SessionSerializer(data=request.data)
@@ -43,9 +51,12 @@ class SessionViewSet(viewsets.ViewSet):
             serializer.validated_data["user"] = request.user
             serializer.save()
 
-            return Response(serializer.data, status=201)
+            return Response(
+                data=serializer.data,
+                status=status.HTTP_201_CREATED,
+            )
 
-        return Response(serializer.errors, status=400)
+        raise ValidationError(detail=serializer.errors)
 
     def retrieve(self, request, session_id):
         try:
@@ -54,23 +65,20 @@ class SessionViewSet(viewsets.ViewSet):
             if request.user == session.user:
                 serializer = self.SessionSerializer(session)
 
-                return Response(serializer.data)
+                return Response(
+                    data=serializer.data,
+                    status=status.HTTP_200_OK,
+                )
 
-            return Response(
-                {
-                    "error": "access_denied",
-                    "message": "You do not have permission to access this object",
-                },
-                status=403,
+            raise PermissionDenied(
+                detail="You do not have permission to access this object",
+                code="access_denied",
             )
 
         except ObjectDoesNotExist:
-            return Response(
-                {
-                    "error": "not_found",
-                    "message": "Object does not exist",
-                },
-                status=404,
+            raise NotFound(
+                detail="Object does not exist",
+                code="not_found",
             )
 
     def destroy(self, request, session_id):
@@ -80,23 +88,19 @@ class SessionViewSet(viewsets.ViewSet):
             if request.user == session.user:
                 session.delete()
 
-                return Response(status=204)
+                return Response(
+                    status=status.HTTP_204_NO_CONTENT,
+                )
 
-            return Response(
-                {
-                    "error": "access_denied",
-                    "message": "You do not have permission to access this object",
-                },
-                status=403,
+            raise PermissionDenied(
+                detail="You do not have permission to access this object",
+                code="access_denied",
             )
 
         except ObjectDoesNotExist:
-            return Response(
-                {
-                    "error": "not_found",
-                    "message": "Object does not exist",
-                },
-                status=404,
+            raise NotFound(
+                detail="Object does not exist",
+                code="not_found",
             )
 
 

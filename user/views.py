@@ -1,8 +1,11 @@
 from django.contrib.auth import authenticate
 
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import (
+    AuthenticationFailed,
+)
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -30,25 +33,19 @@ class UserAuthViewSet(viewsets.ViewSet):
             serializer = UserAuthSerializer(user)
             refresh = RefreshToken.for_user(user)
 
-            response = Response(
-                {
+            return Response(
+                data={
                     "user": serializer.data["username"],
                     "token": {
                         "access": str(refresh.access_token),
                         "refresh": str(refresh),
                     },
                 },
-                status=200,
+                status=status.HTTP_200_OK,
             )
 
-            return response
-
-        return Response(
-            {
-                "error": "login_failed",
-                "message": "Wrong username or password",
-            },
-            status=401,
+        raise AuthenticationFailed(
+            detail="Wrong username or password",
         )
 
     def signup(self, request):
@@ -60,25 +57,19 @@ class UserAuthViewSet(viewsets.ViewSet):
             serializer = UserAuthSerializer(user)
             refresh = RefreshToken.for_user(user)
 
-            response = Response(
-                {
+            return Response(
+                data={
                     "user": serializer.data["username"],
                     "token": {
                         "access": str(refresh.access_token),
                         "refresh": str(refresh),
                     },
                 },
-                status=200,
+                status=status.HTTP_200_OK,
             )
 
-            return response
-
-        return Response(
-            {
-                "error": "signup_failed",
-                "message": "Failed to sign up",
-            },
-            status=401,
+        raise AuthenticationFailed(
+            detail="Failed to sign up",
         )
 
 
@@ -86,7 +77,10 @@ class ProfileViewSet(viewsets.ViewSet):
     def retrieve(self, request):
         serializer = ProfileSerializer(request.user.profile)
 
-        return Response(serializer.data)
+        return Response(
+            data=serializer.data,
+            status=status.HTTP_200_OK,
+        )
 
     def update(self, request):
         pass

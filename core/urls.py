@@ -8,3 +8,8 @@ urlpatterns = [
     path("api/v1/user/", include("user.urls")),
     path("api/v1/session/", include("session.urls")),
 ]
+
+# Generic JSON Error Views
+handler400 = "core.exceptions.bad_request"
+handler404 = "core.exceptions.page_not_found"
+handler500 = "core.exceptions.server_error"
