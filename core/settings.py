@@ -1,20 +1,17 @@
 """
-Django Base Configuration
+Healingmentor Backend Configuration
 
-WARNING: Do not use this setting for deployment!
+This is the settings for healingmentor backend, written in python django.
 
-This is the default setting for django project.
-You can run a test server only using this configuration.
+Configuration which needs to be secured are separated using environment variable.
+Define your own environment variable file to configure those settings.
 
-If you need some change in configuration,
-do not change this file directly.
-
-Rather, create other configuration file and import this file.
-Then you can freely override the configuration.
+Also healingmentor supports default value for those, which is safe to use.
+But please remind that default value is only for development.
 
 Configured by killerwhalee
 
-Github: https://github.com/killerwhalee/healingmentor
+Github: https://github.com/killerwhalee/healingmentor-backend
 
 """
 
@@ -88,9 +85,11 @@ MIDDLEWARE = [
 # Django REST Framework Settings
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication"
-    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        ["rest_framework_simplejwt.authentication.JWTAuthentication"]
+        # Use session authentication only in debug mode
+        + ["rest_framework.authentication.SessionAuthentication"] * bool(DEBUG)
+    ),
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
@@ -100,15 +99,16 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-    ]
-    + (["rest_framework.renderers.BrowsableAPIRenderer"] if DEBUG else []),
+    "DEFAULT_RENDERER_CLASSES": (
+        ["rest_framework.renderers.JSONRenderer"]
+        # Use browsable api only in debug mode
+        + ["rest_framework.renderers.BrowsableAPIRenderer"] * bool(DEBUG)
+    ),
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "EXCEPTION_HANDLER": "core.utils.exception_handler",
+    "EXCEPTION_HANDLER": "core.exceptions.healingmentor_exception_handler",
 }
 
 
@@ -121,7 +121,7 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(hours=2),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
-    "AUTH_HEADER_TYPES": ("Bearer", "bearer"),
+    "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
 }
