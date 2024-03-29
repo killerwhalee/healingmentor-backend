@@ -48,8 +48,11 @@ class SessionViewSet(viewsets.ViewSet):
         serializer = self.SessionSerializer(data=request.data)
 
         if serializer.is_valid():
-            serializer.validated_data["user"] = request.user
-            serializer.save()
+            score = calculate_score(
+                request.user,
+                serializer.validated_data["score"],
+            )
+            serializer.save(user=request.user, score=score)
 
             return Response(
                 data=serializer.data,
