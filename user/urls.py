@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from user.views import UserAuthViewSet, ProfileViewSet
 
+
 urlpatterns = [
     path(
         "auth/login",
