@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     # API Endpoints
     "user.apps.UserConfig",
     "session.apps.SessionConfig",
+    "board.apps.BoardConfig",
 ]
 
 
